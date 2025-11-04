@@ -1,0 +1,65 @@
+# ==========================
+#   ARCHIVOS DE JAVA
+# ==========================
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Logs y temporales
+*.log
+*.tmp
+*.bak
+*.old
+*.swp
+*.swo
+
+# Directorios de compilación
+/bin/
+/target/
+/out/
+/build/
+
+# ==========================
+#   GRADLE / MAVEN
+# ==========================
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# ==========================
+#   IDEs
+# ==========================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+out/
+
+# VS Code
+.vscode/
+.history/
+*.code-workspace
+
+# ==========================
+#   ANGULAR / NODE
+# ==========================
+node_modules/
+dist/
+.tmp/
+.angular/
+coverage/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
