@@ -1,0 +1,2 @@
+// Estructura inicial - pendiente desarrollo
+
