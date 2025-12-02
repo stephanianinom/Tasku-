@@ -125,68 +125,60 @@ pipeline {
             }
         }
         
-        stage('Pruebas Unitarias y SonarQube') {
+        stage('Pruebas Unitarias') {
             steps {
                 script {
                     echo "Ejecutando pruebas unitarias del backend..."
                     dir("${env.BACKEND_DIR}") {
-                        def ejecutarSoloPruebas = {
-                            if (isUnix()) {
-                                sh 'mvn clean test'
-                            } else {
-                                bat 'mvn clean test'
-                            }
-                        }
-                        
-                        try {
-                            withSonarQubeEnv('sonarqube') {
-                                if (isUnix()) {
-                                    sh '''
-                                        mvn clean test
-                                        if [ $? -ne 0 ]; then
-                                            echo Error al ejecutar pruebas unitarias
-                                            exit 1
-                                        fi
-                                        echo "Ejecutando análisis de SonarQube..."
-                                        mvn sonar:sonar \
-                                            -Dsonar.projectKey=tasku-backend \
-                                            -Dsonar.host.url=$SONAR_HOST_URL \
-                                            -Dsonar.login=$SONAR_AUTH_TOKEN \
-                                            -Dsonar.sources=src/main/java \
-                                            -Dsonar.tests=src/test/java \
-                                            -Dsonar.java.binaries=target/classes \
-                                            -Dsonar.junit.reportPaths=target/surefire-reports
-                                    '''
-                                } else {
-                                    bat '''
-                                        mvn clean test
-                                        if errorlevel 1 (
-                                            echo Error al ejecutar pruebas unitarias
-                                            exit /b 1
-                                        )
-                                        echo Ejecutando análisis de SonarQube...
-                                        mvn sonar:sonar ^
-                                            -Dsonar.projectKey=tasku-backend ^
-                                            -Dsonar.host.url=%SONAR_HOST_URL% ^
-                                            -Dsonar.login=%SONAR_AUTH_TOKEN% ^
-                                            -Dsonar.sources=src/main/java ^
-                                            -Dsonar.tests=src/test/java ^
-                                            -Dsonar.java.binaries=target/classes ^
-                                            -Dsonar.junit.reportPaths=target/surefire-reports
-                                        if errorlevel 1 (
-                                            echo Error al ejecutar análisis de SonarQube
-                                            exit /b 1
-                                        )
-                                    '''
-                                }
-                            }
-                        } catch (Exception e) {
-                            echo "SonarQube no configurado o inaccesible - ejecutando solo pruebas unitarias"
-                            echo "Detalle: ${e.getMessage()}"
-                            ejecutarSoloPruebas.call()
+                        if (isUnix()) {
+                            sh 'mvn clean test'
+                        } else {
+                            bat 'mvn clean test'
                         }
                     }
-                    echo "Pruebas unitarias y análisis de SonarQube completados"
+                    echo "Pruebas unitarias completadas"
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            environment {
+                SONAR_HOST_URL = 'http://localhost:9000'
+                SONAR_AUTH_TOKEN = credentials('sonarqube-token')
+            }
+            steps {
+                script {
+                    if (!env.SONAR_AUTH_TOKEN?.trim()) {
+                        echo "Token de SonarQube no configurado - se omite el análisis"
+                        return
+                    }
+                    echo "Ejecutando análisis de SonarQube..."
+                    dir("${env.BACKEND_DIR}") {
+                        if (isUnix()) {
+                            sh '''
+                                mvn sonar:sonar \
+                                    -Dsonar.projectKey=tasku-backend \
+                                    -Dsonar.host.url=$SONAR_HOST_URL \
+                                    -Dsonar.login=$SONAR_AUTH_TOKEN \
+                                    -Dsonar.sources=src/main/java \
+                                    -Dsonar.tests=src/test/java \
+                                    -Dsonar.java.binaries=target/classes \
+                                    -Dsonar.junit.reportPaths=target/surefire-reports
+                            '''
+                        } else {
+                            bat '''
+                                mvn sonar:sonar ^
+                                    -Dsonar.projectKey=tasku-backend ^
+                                    -Dsonar.host.url=%SONAR_HOST_URL% ^
+                                    -Dsonar.login=%SONAR_AUTH_TOKEN% ^
+                                    -Dsonar.sources=src/main/java ^
+                                    -Dsonar.tests=src/test/java ^
+                                    -Dsonar.java.binaries=target/classes ^
+                                    -Dsonar.junit.reportPaths=target/surefire-reports
+                            '''
+                        }
+                    }
+                    echo "Análisis de SonarQube completado"
                 }
             }
         }
