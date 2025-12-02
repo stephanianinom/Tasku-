@@ -237,21 +237,26 @@ pipeline {
             }
         }
         
-        stage('Limpieza de Contenedores Anteriores') {
+        stage('Limpieza de Contenedores Anteriores (Backend/Frontend)') {
             steps {
                 script {
-                    echo "Deteniendo y eliminando contenedores anteriores..."
+                    echo "Deteniendo y eliminando contenedores del backend y frontend..."
                     dir("${env.DOCKER_DIR}") {
                         if (isUnix()) {
                             sh '''
-                                docker-compose -f docker-compose.yml down --remove-orphans || true
+                                docker rm -f tasku-backend || true
+                                docker rm -f tasku-frontend || true
                                 docker image prune -f || true
                             '''
                         } else {
                             bat '''
-                                docker-compose -f docker-compose.yml down --remove-orphans
+                                docker rm -f tasku-backend
                                 if errorlevel 1 (
-                                    echo Advertencia: Error al detener contenedores, continuando...
+                                    echo Advertencia: backend no estaba en ejecución
+                                )
+                                docker rm -f tasku-frontend
+                                if errorlevel 1 (
+                                    echo Advertencia: frontend no estaba en ejecución
                                 )
                                 docker image prune -f
                             '''
@@ -274,14 +279,14 @@ pipeline {
                             bat 'docker ps >nul 2>&1 || (echo Error: No se puede conectar con Docker && exit /b 1)'
                         }
                         
-                        // Desplegar con force-recreate para asegurar redespliegue
+                        // Desplegar únicamente backend y frontend sin afectar SonarQube ni PostgreSQL
                         if (isUnix()) {
                             sh '''
-                                docker-compose -f docker-compose.yml up -d --build --force-recreate --no-deps
+                                docker-compose -f docker-compose.yml up -d --build --force-recreate backend frontend
                             '''
                         } else {
                             bat '''
-                                docker-compose -f docker-compose.yml up -d --build --force-recreate --no-deps
+                                docker-compose -f docker-compose.yml up -d --build --force-recreate backend frontend
                                 if errorlevel 1 (
                                     echo Error durante el despliegue
                                     exit /b 1
