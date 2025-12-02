@@ -130,56 +130,63 @@ pipeline {
                 script {
                     echo "Ejecutando pruebas unitarias del backend..."
                     
+                    // Variables para SonarQube
+                    def sonarUrl = 'http://localhost:9000'
+                    def sonarToken = ''
+                    def hasCredentials = false
+                    
+                    // Intentar leer credenciales de SonarQube
                     try {
-                        env.SONARQUBE_URL = credentials('sonarqube-url')
-                        env.SONARQUBE_TOKEN = credentials('sonarqube-token')
-                        echo "Credenciales de SonarQube configuradas"
-                        echo "URL: ${env.SONARQUBE_URL}"
-                        echo "Token configurado: ${env.SONARQUBE_TOKEN ? 'Sí' : 'No'}"
+                        withCredentials([string(credentialsId: 'sonarqube-url', variable: 'SQ_URL'), 
+                                         string(credentialsId: 'sonarqube-token', variable: 'SQ_TOKEN')]) {
+                            sonarUrl = "${SQ_URL}"
+                            sonarToken = "${SQ_TOKEN}"
+                            hasCredentials = true
+                            echo "Credenciales de SonarQube configuradas"
+                            echo "URL: ${sonarUrl}"
+                            echo "Token configurado: Sí (longitud: ${sonarToken.length()})"
+                        }
                     } catch (Exception e) {
                         echo "Credenciales de SonarQube no encontradas - saltando análisis de código"
                         echo "Error: ${e.getMessage()}"
-                        env.SONARQUBE_URL = 'http://localhost:9000'
-                        env.SONARQUBE_TOKEN = ''
+                        hasCredentials = false
                     }
                     
+                    // Ejecutar pruebas y análisis
                     dir("${env.BACKEND_DIR}") {
                         if (isUnix()) {
-                            sh '''
+                            sh """
                                 mvn clean test
-                                if [ -n "${SONARQUBE_TOKEN}" ] && [ "${SONARQUBE_TOKEN}" != "" ]; then
+                                if [ "${hasCredentials}" == "true" ] && [ -n "${sonarToken}" ] && [ "${sonarToken}" != "" ]; then
                                     echo "Ejecutando análisis de SonarQube..."
-                                    mvn sonar:sonar \
-                                        -Dsonar.projectKey=tasku-backend \
-                                        -Dsonar.host.url=${SONARQUBE_URL} \
-                                        -Dsonar.login=${SONARQUBE_TOKEN} \
-                                        -Dsonar.sources=src/main/java \
-                                        -Dsonar.tests=src/test/java \
-                                        -Dsonar.java.binaries=target/classes \
+                                    mvn sonar:sonar \\
+                                        -Dsonar.projectKey=tasku-backend \\
+                                        -Dsonar.host.url=${sonarUrl} \\
+                                        -Dsonar.login=${sonarToken} \\
+                                        -Dsonar.sources=src/main/java \\
+                                        -Dsonar.tests=src/test/java \\
+                                        -Dsonar.java.binaries=target/classes \\
                                         -Dsonar.junit.reportPaths=target/surefire-reports
                                 else
                                     echo "SonarQube no configurado - saltando análisis de código"
                                 fi
-                            '''
+                            """
                         } else {
-                            bat '''
+                            bat """
                                 mvn clean test
                                 if errorlevel 1 (
                                     echo Error al ejecutar pruebas unitarias
                                     exit /b 1
                                 )
-                                echo Verificando configuración de SonarQube...
-                                echo SONARQUBE_URL=%SONARQUBE_URL%
-                                echo SONARQUBE_TOKEN length=%SONARQUBE_TOKEN:~0,1%
-                                if defined SONARQUBE_TOKEN (
-                                    if not "%SONARQUBE_TOKEN%"=="" (
+                                if "${hasCredentials}"=="true" (
+                                    if not "${sonarToken}"=="" (
                                         echo Ejecutando análisis de SonarQube...
-                                        echo URL: %SONARQUBE_URL%
+                                        echo URL: ${sonarUrl}
                                         echo Token configurado: Sí
                                         mvn sonar:sonar ^
                                             -Dsonar.projectKey=tasku-backend ^
-                                            -Dsonar.host.url=%SONARQUBE_URL% ^
-                                            -Dsonar.login=%SONARQUBE_TOKEN% ^
+                                            -Dsonar.host.url=${sonarUrl} ^
+                                            -Dsonar.login=${sonarToken} ^
                                             -Dsonar.sources=src/main/java ^
                                             -Dsonar.tests=src/test/java ^
                                             -Dsonar.java.binaries=target/classes ^
@@ -192,15 +199,11 @@ pipeline {
                                         echo SonarQube no configurado - Token vacío
                                     )
                                 ) else (
-                                    echo SonarQube no configurado - Token no definido
+                                    echo SonarQube no configurado - Credenciales no encontradas
                                 )
-                            '''
+                            """
                         }
                     }
-                    echo "Pruebas unitarias y análisis de SonarQube completados"
-                }
-            }
-        }
         
         stage('Build Imágenes Docker') {
             parallel {
