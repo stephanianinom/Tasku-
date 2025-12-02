@@ -156,7 +156,7 @@ pipeline {
                     dir("${env.BACKEND_DIR}") {
                         if (isUnix()) {
                             sh '''
-                                mvn sonar:sonar \
+                                mvn verify sonar:sonar \
                                     -Dsonar.projectKey=tasku-backend \
                                     -Dsonar.host.url=$SONAR_HOST_URL \
                                     -Dsonar.login=$SONAR_AUTH_TOKEN \
@@ -167,7 +167,7 @@ pipeline {
                             '''
                         } else {
                             bat '''
-                                mvn sonar:sonar ^
+                                mvn verify sonar:sonar ^
                                     -Dsonar.projectKey=tasku-backend ^
                                     -Dsonar.host.url=%SONAR_HOST_URL% ^
                                     -Dsonar.login=%SONAR_AUTH_TOKEN% ^
