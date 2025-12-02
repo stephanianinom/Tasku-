@@ -133,7 +133,7 @@ pipeline {
                     // Variables para SonarQube
                     def sonarUrl = 'http://localhost:9000'
                     def sonarToken = ''
-                    def hasCredentials = false
+                    def hasCredentials = 'false'
                     
                     // Intentar leer credenciales de SonarQube
                     try {
@@ -141,7 +141,7 @@ pipeline {
                                          string(credentialsId: 'sonarqube-token', variable: 'SQ_TOKEN')]) {
                             sonarUrl = "${SQ_URL}"
                             sonarToken = "${SQ_TOKEN}"
-                            hasCredentials = true
+                            hasCredentials = 'true'
                             echo "Credenciales de SonarQube configuradas"
                             echo "URL: ${sonarUrl}"
                             echo "Token configurado: Sí (longitud: ${sonarToken.length()})"
@@ -149,7 +149,7 @@ pipeline {
                     } catch (Exception e) {
                         echo "Credenciales de SonarQube no encontradas - saltando análisis de código"
                         echo "Error: ${e.getMessage()}"
-                        hasCredentials = false
+                        hasCredentials = 'false'
                     }
                     
                     // Ejecutar pruebas y análisis
@@ -178,6 +178,9 @@ pipeline {
                                     echo Error al ejecutar pruebas unitarias
                                     exit /b 1
                                 )
+                                echo Verificando SonarQube...
+                                echo hasCredentials: ${hasCredentials}
+                                echo sonarToken length: ${sonarToken.length()}
                                 if "${hasCredentials}"=="true" (
                                     if not "${sonarToken}"=="" (
                                         echo Ejecutando análisis de SonarQube...
